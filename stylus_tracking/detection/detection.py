@@ -6,7 +6,10 @@ from cv2 import aruco
 from stylus_tracking.calibration import calibration
 from stylus_tracking.detection import transform
 
-PENCIL_LENGTH = 153  # [mm] from dodecahedron center to tip of pencil.
+PENCIL_LENGTH = 120  # [mm] from dodecahedron center to tip of pencil.
+
+
+# Bài toán đặt ra là tìm được tọa độ đầu bút so với mặt phẳng của bàn
 
 
 class Detection:
@@ -16,24 +19,25 @@ class Detection:
         self.cam_param = cam_param 
         self.success = False
         # Tải bộ từ điển Aruco 4x4, 50 mẫu
-        self.marker_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
+        self.marker_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
         # Tham số nhận dạng Aruco (tham số mặc định)
-        self.parameters = aruco.DetectorParameters_create()
+        self.parameters = aruco.DetectorParameters()
 
         # Tạo bàn Aruco với 12 điểm đánh dấu và 12 ID tương ứng
         points = dodecahedron_aruco_points() # Tọa độ 12 marker (top left, top right, bot right, bot left)
         ids = np.array([[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11]]) # ID tương ứng với 12 điểm đánh dấu
-        self.board = aruco.Board_create(points, self.marker_dict, ids)
+        self.board = aruco.Board(points, self.marker_dict, ids)
 
         
 
         # Mô tả mối quan hệ từ tâm mặt bàn đến tâm camera (World-to-Camera)
-        world_to_camera = transform.Transform.from_parameters(np.asscalar(self.cam_param.tvecs[0]),
-                                            np.asscalar(self.cam_param.tvecs[1]),
-                                            np.asscalar(self.cam_param.tvecs[2]),
-                                            np.asscalar(self.cam_param.rvecs[0]),
-                                            np.asscalar(self.cam_param.rvecs[1]),
-                                            np.asscalar(self.cam_param.rvecs[2]))
+        world_to_camera = transform.Transform.from_parameters(
+                                            self.cam_param.tvecs[0].item(), # mảng một chiều sang giá trị vô hướng
+                                            self.cam_param.tvecs[1].item(),
+                                            self.cam_param.tvecs[2].item(),
+                                            self.cam_param.rvecs[0].item(),
+                                            self.cam_param.rvecs[1].item(),
+                                            self.cam_param.rvecs[2].item())
 
         self.camera_to_world = world_to_camera.inverse()
 
@@ -42,7 +46,7 @@ class Detection:
         tp = self.tvec_pencil
         # Mô tả mối quan hệ từ đầu bút đến tâm khối 12 mặt (Tip-to-Stylus)
         # trả về ma trận đồng nhất 4x4
-        self.tip_to_stylus = transform.Transform.from_parameters(tp[0], tp[1], tp[2], 0, 0, 0)
+        self.tip_to_stylus = transform.Transform.from_parameters(tp[0].item(), tp[1].item(), tp[2].item(), 0, 0, 0)
 
     # bước 1: Nhận dạng
     def detect(self, img):
@@ -55,40 +59,50 @@ class Detection:
         # corners: tọa độ các góc của marker, góc tọa độ ở top-left khung hình camera
         # id marker theo thứ tự
         # hình vuông bị loại bỏ
-        corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, self.marker_dict, parameters=self.parameters,
-                                                              cameraMatrix=self.cam_param.intrinsic_parameters[
-                                                                  'cameraMatrix'],
-                                                              distCoeff=self.cam_param.intrinsic_parameters['distCoef'])
+        corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, self.marker_dict, parameters=self.parameters)
 
         # Bước 1.2: Ước lượng tư thế của các ArUco Marker
         # success: trạng thái true, false
         # rvec: [rx, ry, rz]
         # tvec: [tx, ty, tz]
-        self.success, rotation, translation_ = aruco.estimatePoseBoard(corners, ids, self.board,
-                                                                      self.cam_param.intrinsic_parameters[
-                                                                          'cameraMatrix'],
-                                                                      self.cam_param.intrinsic_parameters[
-                                                                          'distCoef'])
+
+        # Kiểm tra xem có phát hiện marker nào không trước khi ước lượng tư thế
+        # OpenCV 4.13 sẽ crash nếu ids rỗng
+        if ids is not None and len(ids) > 0:
+            rvec_init = np.zeros((3, 1), dtype=np.float64)
+            tvec_init = np.zeros((3, 1), dtype=np.float64)
+            num_markers, rotation, translation_ = aruco.estimatePoseBoard(
+                corners, ids, self.board,
+                self.cam_param.intrinsic_parameters['cameraMatrix'],
+                self.cam_param.intrinsic_parameters['distCoef'],
+                rvec_init, tvec_init)
+            self.success = num_markers > 0
+        else:
+            self.success = False
 
         if self.success:
             rvec = rotation.copy()
             tvec = translation_.copy()
 
+            # Vẽ một khung viền cho marker và gán id cho mỗi marker
             img = aruco.drawDetectedMarkers(img, corners, ids)
 
-            img = aruco.drawAxis(img, self.cam_param.intrinsic_parameters['cameraMatrix'],
+            # Vẽ hệ trục tọa độ, 3 trục 3 màu (X: đỏ, Y: lục, Z: lam)
+            # tvec là vector tịnh tiến từ tâm camera đến tâm mặt bàn
+            # rvec là vector góc quay từ tâm camera đến tâm mặt bàn
+            img = cv2.drawFrameAxes(img, self.cam_param.intrinsic_parameters['cameraMatrix'],
                                    self.cam_param.intrinsic_parameters['distCoef'], rvec, tvec, length=100)
 
-            #print(rvec)
-            #print(tvec)
+            # print(rvec)
+            # print(tvec)
 
 
             # Tạo đối trượng Transform chứa tất cả thông tin biến đổi (Stylus-to-Camera)
             # Tính toán nó thành hai mà trận 3x3 (ma trận xoay) và 3x1 (ma trận tịnh tiến) 
             # Kết quả ra ma trận 4x4 (dạng đồng nhất) -> Extrinsic Matrix
-            stylus_to_camera = transform.Transform.from_parameters(np.asscalar(tvec[0]), np.asscalar(tvec[1]),
-                                                         np.asscalar(tvec[2]), np.asscalar(rvec[0]),
-                                                         np.asscalar(rvec[1]), np.asscalar(rvec[2]))
+            stylus_to_camera = transform.Transform.from_parameters(tvec[0].item(), tvec[1].item(),
+                                                         tvec[2].item(), rvec[0].item(),
+                                                         rvec[1].item(), rvec[2].item())
 
             # Mô tả mối quan hệ biến đổi từ đầu bút đến camera (Tip-to-Camera)
             tip_to_camera = stylus_to_camera.combine(self.tip_to_stylus, True)
@@ -99,42 +113,56 @@ class Detection:
             tip_to_world = self.camera_to_world.combine(tip_to_camera, True)
 
             tip_info = tip_to_world.to_parameters(True)
+            # Tọa độ đầu bút
             position_x = tip_info[0]
             position_y = tip_info[1]
-            position_z = tip_info[2]
-
-
+            position_z = tip_info[2]            # DEBUG: In tọa độ đầu bút real-time
+            # Khi đầu bút chạm mặt bàn, z phải gần 0
+            # Nếu z > 0: PENCIL_LENGTH quá ngắn (tăng lên)
+            # Nếu z < 0: PENCIL_LENGTH quá dài (giảm xuống)
+            print(f"\r Tip position: x={position_x:7.1f}  y={position_y:7.1f}  z={position_z:7.1f} mm", end="")
 
             return img, (position_x, position_y, position_z, 1)
         else:
             return img, None
 
 
-# TODO new file
 def rotation_around_y(d):
     r = np.deg2rad(d)
-    return np.matrix([[np.cos(r), 0, -np.sin(r), 0], [0, 1, 0, 0], [np.sin(r), 0, np.cos(r), 0], [0, 0, 0, 1]],
-                     dtype=np.float32)
+    return np.matrix(
+        [
+            [np.cos(r), 0, -np.sin(r), 0], 
+            [0, 1, 0, 0], 
+            [np.sin(r), 0, np.cos(r), 0], 
+            [0, 0, 0, 1]
+        ],
+        dtype=np.float32)
 
 
 def rotation_around_z(d):
     r = np.deg2rad(d)
-    return np.matrix([[np.cos(r), np.sin(r), 0, 0], [-np.sin(r), np.cos(r), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
-                     dtype=np.float32)
+    return np.matrix(
+        [
+            [np.cos(r), np.sin(r), 0, 0], 
+            [-np.sin(r), np.cos(r), 0, 0], 
+            [0, 0, 1, 0], 
+            [0, 0, 0, 1]
+        ],
+        dtype=np.float32)
 
-
+# chưa
 def to_homogenous_position(a):
     size = a.shape[0]
     res = np.ones((size+1, 1))
     res[:size, :] = a
     return res
-
+# chưa
 def to_homogenous_translation(a):
     size = a.shape[0]
     res = np.identity(size+1)
     res[:size,size] = a.flatten()
     return res
-
+# chưa
 def to_homogenous_rotation(a):
     size = a.shape[0]
     res = np.identity(size+1)
@@ -142,7 +170,14 @@ def to_homogenous_rotation(a):
     return res
 
 def translation(tx, ty, tz):
-    return np.matrix([[1, 0, 0, tx], [0, 1, 0, ty], [0, 0, 1, tz], [0, 0, 0, 1]], dtype=np.float32)
+    return np.matrix(
+        [
+            [1, 0, 0, tx], 
+            [0, 1, 0, ty], 
+            [0, 0, 1, tz], 
+            [0, 0, 0, 1]
+        ],
+        dtype=np.float32)
 
 # Homogeneous to Cartesian (4D to 3D)
 # [x, y, z, w] -> [x/w, y/w, z/w]

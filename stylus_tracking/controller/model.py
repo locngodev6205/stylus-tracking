@@ -1,6 +1,6 @@
 import numpy as np
 
-Z_GRAY_FACTOR= 4
+Z_GRAY_FACTOR= 2
 
 
 def remove_np_duplicates(data):
@@ -53,14 +53,17 @@ class AppModel:
     Z = 256
 
     def __init__(self):
+        # lưu hình ảnh hiện tại từ camera đẻ GUI hiển thị lên màn hình
         self.current_frame = None
         self.graph = None
         self.new_x = None
         self.new_y = None
         self.new_z = None
+        # Lưu lịch sử tọa độ dịch chuyển của đầu bút
         self.x = []
         self.y = []
         self.z = []
+        
         self.reset_graph()
         self.last_x = None
         self.last_y = None
@@ -90,8 +93,10 @@ class AppModel:
 
         ix = int(x) + self.X
         iy = int(y) + self.Y
-        iz = 256 - abs(int(z*Z_GRAY_FACTOR))
+        # đậm/nhạt phụ thuộc vào độ cao/thấp của đầu bút
+        iz = min(255, max(0, 256 - abs(int(z*Z_GRAY_FACTOR))))
 
+        # bàn vẽ ảo
         self.drawing[ix, iy, :] = iz, iz, iz
         self.drawing[ix, iy + 1, :] = iz, iz, iz
         self.drawing[ix, iy - 1, :] = iz, iz, iz
@@ -99,6 +104,7 @@ class AppModel:
         self.drawing[ix - 1, iy, :] = iz, iz, iz
 
         if self.last_x:
+            # nội suy ra các điểm nằm trên đường thẳng nối 2 điểm gần nhất
             for i in get_grid_cells_btw((self.last_x, self.last_y), (ix, iy)):
                 x = i[0]
                 y = i[1]

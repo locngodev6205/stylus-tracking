@@ -16,6 +16,7 @@ class Transform:
         # rodrigues: chuyển đổ 3 góc quay thành ma trận xoay 3x3
         self.matrix[0:3, 0:3] = self.rodrigues(x, y, z)
 
+    # chưa
     def translate(self, x=0, y=0, z=0, transform=None):
         if transform:
             new_transform = transform.copy()
@@ -26,18 +27,19 @@ class Transform:
 
         return self
 
-    # Phép biến đổi ngược
+    # Phép biến đổi ngược, chưa hiểu công thức
     def inverse(self):
         ret = Transform()
-        ret.matrix[0:3, 0:3] = self.matrix[0:3, 0:3].transpose() # ngược xoay
+        ret.matrix[0:3, 0:3] = self.matrix[0:3, 0:3].transpose() # chuyển vị (đối xứng)
         ret.matrix[0:3, 3] = -ret.matrix[0:3, 0:3].dot(self.matrix[0:3, 3]) # ngược tịnh tiến
 
         return ret
 
+    # nhân ma trận với vector (hỗ trợ 3D và 4D)
     def dot(self, points):
         shape = points.shape
         if shape[1] == 3:
-            # to homogeneous (stack layer of one)
+            # chuyển sang tọa độ đồng nhất
             ones = np.ones((shape[0], 1))
             homogeneous = np.hstack((points, ones)).T
         elif shape[1] == 4:
@@ -47,6 +49,7 @@ class Transform:
                 "input array has to be of size 3 or in homogeneous coordinate, current size = " + str(shape))
         return self.matrix.dot(homogeneous).T[:, 0:3]
 
+    # Nhân 2 ma trận với nhau (Phép biến đổi tổng hợp)
     def combine(self, transform, copy=False):
         ret_transform = self
         if not copy:
@@ -57,6 +60,7 @@ class Transform:
 
         return ret_transform
 
+    # lấy thông tin của ma trận (tọa độ + góc quay)
     def to_parameters(self, isDegree=False):
         x, y, z = self.matrix[0:3, 3]
         a, b, c = self.rodrigues_inverse(self.matrix[0:3, 0:3])
@@ -69,6 +73,7 @@ class Transform:
 
         return np.array(ret)
 
+    # Tạo ma trận 4x4 từ tọa độ và góc quay
     @staticmethod
     def from_parameters(x, y, z, euler_x, euler_y, euler_z, is_degree=False):
         ret = Transform()
@@ -81,6 +86,7 @@ class Transform:
 
         return ret
 
+    # Gán ma trận 4x4 vào đối tượng Transform
     @staticmethod
     def from_matrix(matrix):
         ret = Transform()
@@ -88,6 +94,7 @@ class Transform:
 
         return ret
 
+    # in ra tọa độ và góc quay
     def __str__(self):
         params = self.to_parameters(isDegree=True)
         ret = ""
@@ -100,9 +107,11 @@ class Transform:
 
         return ret
 
+    # in ra ma trận 4x4
     def __repr__(self):
         return str(self.matrix)
 
+    # Tạo ma trận xoay 3x3 từ góc quay Euler, chưa hiểu
     def rodrigues(self, x, y, z):
         matrix = np.eye(3)
         omega_skew = np.zeros((3, 3))
@@ -139,6 +148,7 @@ class Transform:
 
         return matrix
 
+    # ngược lại với hàm trên, chưa hiểu
     def rodrigues_inverse(self, matrix):
         x, y, z = 0, 0, 0
         r = matrix - matrix.T

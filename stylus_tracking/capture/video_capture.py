@@ -6,12 +6,20 @@ class VideoCapture:
     WIDTH = 1280
 
     def __init__(self, video_source=0):
+        """
+        video_source: int (device index, ví dụ 0) hoặc str (URL stream, ví dụ "http://192.168.1.5:4747/video")
+        """
         self.video_capture = cv2.VideoCapture(video_source)
         if not self.video_capture.isOpened():
             raise ValueError("Unable to open video source {}.".format(video_source))
-        self.video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.WIDTH)
-        self.video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.HEIGHT)
 
+        # Chỉ set resolution khi dùng camera local (device index)
+        # IP camera tự quản lý resolution qua app
+        if isinstance(video_source, int):
+            self.video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.WIDTH)
+            self.video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.HEIGHT)
+
+    # giải phóng 
     def __del__(self):
         if self.video_capture.isOpened():
             self.video_capture.release()
@@ -24,3 +32,4 @@ class VideoCapture:
                 return ret, image
             else:
                 return ret, None
+

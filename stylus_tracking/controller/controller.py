@@ -1,4 +1,5 @@
 import sys
+# quản lý ghi log, thông báo lỗi/tiến trình
 from logging import Logger
 import numpy as np
 
@@ -16,8 +17,19 @@ class Controller:
     # FILTER_TYPE = "median"
     FILTER_TYPE = "kalman"
 
-    def __init__(self, logger: Logger, video_source=0):
+    # CHỌN CAMERA: "phone" (dùng DroidCam) hoặc "pc" (dùng Webcam máy tính)
+    CAMERA_MODE = "phone" 
+
+    # ĐỔI IP THÀNH IP ĐIỆN THOẠI CỦA BẠN (xem trong app DroidCam)
+    DROIDCAM_URL = "http://192.168.1.13:4747/video"
+
+    def __init__(self, logger: Logger, video_source=None):
         self.logger = logger
+        if video_source is None:
+            if self.CAMERA_MODE == "phone":
+                video_source = self.DROIDCAM_URL
+            else:
+                video_source = 0  # 0 là camera mặc định của máy tính
         self.video_capture = VideoCapture(video_source)
         self.calibration = calibration.Calibration(self.logger.getChild("Calibration"))
         self.state = State.RAW
@@ -32,6 +44,7 @@ class Controller:
         elif self.FILTER_TYPE == "none":
             self.filter = FilterNone()
 
+    # GIAI ĐOẠN 4: NHẬN DẠNG VÀ BẮT TỌA ĐỘ BÚT REAL-TIME
     def next_frame(self):
         ret, frame = self.video_capture.get_next_frame()
         self.model.current_frame = frame
@@ -55,23 +68,28 @@ class Controller:
                     self.logger.info("Calibration should be performed prior to detection.")
         return refresh
 
+    # GIAI ĐOẠN 2: HIỆU CHUẨN NỘI THAM (INTRINSIC CALIBRATION)
     def start_intrinsic_calibration(self) -> None:
         self.state = State.CALIBRATING_INTRINSIC
         self.calibration.start_intrinsic_calibration()
 
+    # GIAI ĐOẠN 3: HIỆU CHUẨN NGOẠI THAM (EXTRINSIC CALIBRATION)
     def calculate_extrinsic(self) -> None:
         if self.state is not State.CALIBRATED_INTRINSIC:
             self.logger.info("Intrinsic calibration should be performed prior to the extrinsic one.")
         else:
             self.state = State.CALIBRATING_EXTRINSIC
 
+    # kiểm tra nếu đã có dữ liệu hiệu chuẩn nội tham trước đó thì load lên
     def try_load_previous_intrinsic_calibration_parameters(self) -> None:
         if self.calibration.try_load_intrinsic():
             self.state = State.CALIBRATED_INTRINSIC
 
+    # reset lại hiệu chuẩn ngoại tham
     def reset_extrinsic_calibration(self) -> None:
         self.state = State.CALIBRATING_EXTRINSIC
 
+    # GIAI ĐOẠN 5: LỌC VÀ THÊM ĐIỂM (FILTERING AND ADDING POINTS)
     def filter_and_add_point(self, point):
         refresh = False
         if point is not None:
