@@ -6,7 +6,7 @@ from cv2 import aruco
 from stylus_tracking.calibration import calibration
 from stylus_tracking.detection import transform
 
-PENCIL_LENGTH = 120  # [mm] from dodecahedron center to tip of pencil.
+PENCIL_LENGTH = 145  # [mm] from dodecahedron center to tip of pencil.
 
 
 # Bài toán đặt ra là tìm được tọa độ đầu bút so với mặt phẳng của bàn
@@ -104,6 +104,26 @@ class Detection:
             position_x = tip_info[0]
             position_y = tip_info[1]
             position_z = tip_info[2]
+
+            # === VẼ TỌA ĐỘ VÀ CHẤM ĐỎ NGAY TẠI ĐẦU BÚT TRÊN ẢNH CAMERA ===
+            tip_3d_cam = tip_to_camera.matrix[0:3, 3] # vị trí 3D của đầu bút so với camera
+            img_pts, _ = cv2.projectPoints(
+                np.array([tip_3d_cam], dtype=np.float64),
+                np.zeros((3, 1), dtype=np.float64),
+                np.zeros((3, 1), dtype=np.float64),
+                self.cam_param.intrinsic_parameters['cameraMatrix'],
+                self.cam_param.intrinsic_parameters['distCoef']
+            )
+            pixel_x = int(img_pts[0][0][0])
+            pixel_y = int(img_pts[0][0][1])
+
+            # Vẽ chấm đỏ và vòng tròn trắng bao quanh tại vị trí đầu bút trên camera
+            cv2.circle(img, (pixel_x, pixel_y), 6, (0, 0, 255), -1)
+            cv2.circle(img, (pixel_x, pixel_y), 10, (255, 255, 255), 2)
+            # Viết tọa độ ngay cạnh đầu bút trên màn hình camera
+            cv2.putText(img, f"Tip: ({position_x:.1f}, {position_y:.1f}, {position_z:.1f})", 
+                        (pixel_x + 15, pixel_y - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
             # === VẼ THÔNG TIN LÊN MÀN HÌNH (OVERLAY) ===
             h, w = img.shape[:2]
@@ -228,7 +248,7 @@ def dodecahedron_aruco_points() -> np.array:
     # second row
     for i in [0, 4, 3, 2, 1]:
         aruco_corners = rotation_around_z(72 * i) * rotation_around_y(116.565) * \
-                        rotation_around_y(180) * translation(0, 0, -radius) * origin_points
+                        translation(0, 0, -radius) * rotation_around_y(180) * origin_points
         all_aruco_points.append(hom2cart(aruco_corners).T)
 
     # top

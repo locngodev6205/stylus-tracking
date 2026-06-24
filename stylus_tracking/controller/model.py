@@ -1,6 +1,6 @@
 import numpy as np
 
-Z_GRAY_FACTOR= 2
+Z_GRAY_FACTOR= 6
 
 
 def remove_np_duplicates(data):

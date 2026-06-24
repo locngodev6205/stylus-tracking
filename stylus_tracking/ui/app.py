@@ -72,7 +72,7 @@ class App:
         if self.camera_frame is not None:
             resized_image = cv2.resize(self.controller.model.current_frame, None,
                                        fx=self.RESIZE_FACTOR, fy=self.RESIZE_FACTOR, interpolation=cv2.INTER_LINEAR)
-            self.current_image = ImageTk.PhotoImage(image=Image.fromarray(np.fliplr(resized_image)))
+            self.current_image = ImageTk.PhotoImage(image=Image.fromarray(resized_image))
             self.camera_canvas.create_image(0, 0, image=self.current_image, anchor=tk.NW)
 
         self.current_drawing = ImageTk.PhotoImage(image=Image.fromarray(self.controller.model.drawing))
@@ -142,6 +142,7 @@ class App:
                                 command=self.__close_camera_frame)
         done_button.grid(row=4, column=1, columnspan=2)
 
-    def __close_camera_frame(self):
-        self.camera_frame.destroy()
-        self.camera_frame = None
+    def __close_camera_frame(self, event=None):
+        if self.camera_frame is not None:
+            self.camera_frame.destroy()
+            self.camera_frame = None
