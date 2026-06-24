@@ -21,10 +21,10 @@ class Controller:
     CAMERA_MODE = "phone" 
 
     # BẬT NẾU HÌNH ẢNH BỊ LẬT NGANG (mirror) - thường xảy ra khi DroidCam dùng camera trước
-    FLIP_HORIZONTAL = True
+    FLIP_HORIZONTAL = False
 
     # ĐỔI IP THÀNH IP ĐIỆN THOẠI CỦA BẠN (xem trong app DroidCam)
-    DROIDCAM_URL = "http://192.168.1.13:4747/video"
+    DROIDCAM_URL = "http://172.16.1.249:4747/video"
 
     def __init__(self, logger: Logger, video_source=None):
         self.logger = logger
@@ -67,6 +67,10 @@ class Controller:
                 if self.detection is not None:
                     self.model.current_frame, point = self.detection.detect(frame)
                     refresh = self.filter_and_add_point(point)
+                    if point is None:
+                        self.model.new_x = None
+                        self.model.new_y = None
+                        self.model.new_z = None
                 else:
                     self.logger.info("Calibration should be performed prior to detection.")
         return refresh
