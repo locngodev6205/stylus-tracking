@@ -20,6 +20,9 @@ class Controller:
     # CHỌN CAMERA: "phone" (dùng DroidCam) hoặc "pc" (dùng Webcam máy tính)
     CAMERA_MODE = "phone" 
 
+    # BẬT NẾU HÌNH ẢNH BỊ LẬT NGANG (mirror) - thường xảy ra khi DroidCam dùng camera trước
+    FLIP_HORIZONTAL = True
+
     # ĐỔI IP THÀNH IP ĐIỆN THOẠI CỦA BẠN (xem trong app DroidCam)
     DROIDCAM_URL = "http://192.168.1.13:4747/video"
 
@@ -30,7 +33,7 @@ class Controller:
                 video_source = self.DROIDCAM_URL
             else:
                 video_source = 0  # 0 là camera mặc định của máy tính
-        self.video_capture = VideoCapture(video_source)
+        self.video_capture = VideoCapture(video_source, flip_horizontal=self.FLIP_HORIZONTAL)
         self.calibration = calibration.Calibration(self.logger.getChild("Calibration"))
         self.state = State.RAW
         self.detection = None

@@ -53,19 +53,19 @@ class Detection:
         # chuyển hình ảnh sang grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-
-
         # Bước 1.1: Nhận dạng các ArUco Marker
         # corners: tọa độ các góc của marker, góc tọa độ ở top-left khung hình camera
         # id marker theo thứ tự
         # hình vuông bị loại bỏ
         corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, self.marker_dict, parameters=self.parameters)
 
-        # Bước 1.2: Ước lượng tư thế của các ArUco Marker
-        # success: trạng thái true, false
-        # rvec: [rx, ry, rz]
-        # tvec: [tx, ty, tz]
+        # === LUÔN VẼ TẤT CẢ MARKER ĐƯỢC PHÁT HIỆN (kể cả khi chưa đủ để ước lượng tư thế) ===
+        num_detected = 0
+        if ids is not None and len(ids) > 0:
+            num_detected = len(ids)
+            img = aruco.drawDetectedMarkers(img, corners, ids)
 
+        # Bước 1.2: Ước lượng tư thế của các ArUco Marker
         # Kiểm tra xem có phát hiện marker nào không trước khi ước lượng tư thế
         # OpenCV 4.13 sẽ crash nếu ids rỗng
         if ids is not None and len(ids) > 0:
@@ -84,30 +84,17 @@ class Detection:
             rvec = rotation.copy()
             tvec = translation_.copy()
 
-            # Vẽ một khung viền cho marker và gán id cho mỗi marker
-            img = aruco.drawDetectedMarkers(img, corners, ids)
-
             # Vẽ hệ trục tọa độ, 3 trục 3 màu (X: đỏ, Y: lục, Z: lam)
-            # tvec là vector tịnh tiến từ tâm camera đến tâm mặt bàn
-            # rvec là vector góc quay từ tâm camera đến tâm mặt bàn
             img = cv2.drawFrameAxes(img, self.cam_param.intrinsic_parameters['cameraMatrix'],
                                    self.cam_param.intrinsic_parameters['distCoef'], rvec, tvec, length=100)
 
-            # print(rvec)
-            # print(tvec)
-
-
             # Tạo đối trượng Transform chứa tất cả thông tin biến đổi (Stylus-to-Camera)
-            # Tính toán nó thành hai mà trận 3x3 (ma trận xoay) và 3x1 (ma trận tịnh tiến) 
-            # Kết quả ra ma trận 4x4 (dạng đồng nhất) -> Extrinsic Matrix
             stylus_to_camera = transform.Transform.from_parameters(tvec[0].item(), tvec[1].item(),
                                                          tvec[2].item(), rvec[0].item(),
                                                          rvec[1].item(), rvec[2].item())
 
             # Mô tả mối quan hệ biến đổi từ đầu bút đến camera (Tip-to-Camera)
             tip_to_camera = stylus_to_camera.combine(self.tip_to_stylus, True)
-            # TODO return position + orientation of the stylus
-
 
             # Mô tả mối quan hệ biến đổi từ đầu bút đến thế giới (Tip-to-World)
             tip_to_world = self.camera_to_world.combine(tip_to_camera, True)
@@ -116,14 +103,50 @@ class Detection:
             # Tọa độ đầu bút
             position_x = tip_info[0]
             position_y = tip_info[1]
-            position_z = tip_info[2]            # DEBUG: In tọa độ đầu bút real-time
-            # Khi đầu bút chạm mặt bàn, z phải gần 0
-            # Nếu z > 0: PENCIL_LENGTH quá ngắn (tăng lên)
-            # Nếu z < 0: PENCIL_LENGTH quá dài (giảm xuống)
+            position_z = tip_info[2]
+
+            # === VẼ THÔNG TIN LÊN MÀN HÌNH (OVERLAY) ===
+            h, w = img.shape[:2]
+            # Nền bán trong suốt cho phần text
+            overlay = img.copy()
+            cv2.rectangle(overlay, (10, 10), (420, 130), (0, 0, 0), -1)
+            cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
+
+            # Trạng thái nhận diện
+            cv2.putText(img, f"Markers: {num_detected} detected", (20, 35),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            # Tọa độ đầu bút
+            cv2.putText(img, f"X: {position_x:7.1f} mm", (20, 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            cv2.putText(img, f"Y: {position_y:7.1f} mm", (20, 85),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            # Màu cho Z: xanh lá nếu gần bàn (|z| < 20), vàng nếu hơi cao, đỏ nếu quá cao
+            if abs(position_z) < 20:
+                z_color = (0, 255, 0)   # Xanh lá - gần mặt bàn
+            elif abs(position_z) < 80:
+                z_color = (0, 255, 255) # Vàng - hơi cao
+            else:
+                z_color = (0, 0, 255)   # Đỏ - quá cao / nhảy bất thường
+            cv2.putText(img, f"Z: {position_z:7.1f} mm", (20, 110),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, z_color, 2)
+
+            # In ra terminal (giữ nguyên)
             print(f"\r Tip position: x={position_x:7.1f}  y={position_y:7.1f}  z={position_z:7.1f} mm", end="")
 
             return img, (position_x, position_y, position_z, 1)
         else:
+            # === KHI KHÔNG NHẬN DIỆN ĐƯỢC TƯ THẾ ===
+            overlay = img.copy()
+            cv2.rectangle(overlay, (10, 10), (420, 60), (0, 0, 0), -1)
+            cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
+
+            if num_detected > 0:
+                cv2.putText(img, f"Markers: {num_detected} (pose failed)", (20, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
+            else:
+                cv2.putText(img, "No markers detected", (20, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
             return img, None
 
 

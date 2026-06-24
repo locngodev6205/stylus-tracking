@@ -68,6 +68,17 @@ class Calibration:
         self.logger.info("Starting EXTRINSIC calibration.")
         # quét tìm 4 marker ở bàn
         _, corners, ids = self.get_frame_with_aruco_label(frame)
+
+        # === DEBUG: In ra các marker đang thấy ===
+        if ids is not None and len(ids) > 0:
+            detected_ids = ids.flatten().tolist()
+            self.logger.info(f"  Detected marker IDs: {detected_ids}")
+            missing = [cid for cid in self.CORNERS_IDS if cid not in detected_ids]
+            if missing:
+                self.logger.warning(f"  Missing corner IDs: {missing} (cần tất cả {list(self.CORNERS_IDS)})")
+        else:
+            self.logger.warning("  No markers detected at all! Hãy chỉa camera vào 4 marker góc bàn.")
+
         # trích xuất tọa độ 2D của 4 marker
         if np.any(ids) and np.all(np.isin(self.CORNERS_IDS, ids)):
             image_points = np.zeros((4, 2))
