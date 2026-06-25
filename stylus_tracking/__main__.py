@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-import tkinter as tk
+import tkinter as tk # thư viện tạo giao diện đồ họa
 
 from stylus_tracking.controller.controller import Controller
 from stylus_tracking.ui.app import App

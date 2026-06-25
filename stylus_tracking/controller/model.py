@@ -47,7 +47,7 @@ def get_grid_cells_btw(p1, p2):
 
 
 class AppModel:
-    SCALER = 4
+    SCALER = 4 # phóng to cho phù hợp với kích thước vẽ màn hình
     X = 103 * SCALER
     Y = 135 * SCALER
     Z = 256
@@ -63,7 +63,7 @@ class AppModel:
         self.x = []
         self.y = []
         self.z = []
-        
+        # tạo self.drawing trống
         self.reset_graph()
         self.last_x = None
         self.last_y = None
@@ -98,6 +98,7 @@ class AppModel:
 
         # bàn vẽ ảo
         self.drawing[ix, iy, :] = iz, iz, iz
+        # tỏa ra 4 phía cho nét hơn
         self.drawing[ix, iy + 1, :] = iz, iz, iz
         self.drawing[ix, iy - 1, :] = iz, iz, iz
         self.drawing[ix + 1, iy, :] = iz, iz, iz
@@ -119,4 +120,5 @@ class AppModel:
         self.x = []
         self.y = []
         self.z = []
+        # rộng, cao, RBG
         self.drawing = np.zeros([self.X * 2 + 2, self.Y * 2 + 2, 3], dtype=np.uint8)

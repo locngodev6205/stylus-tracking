@@ -9,11 +9,11 @@ from cv2 import aruco
 # Tiêu cự, tâm ảnh, các hệ số méo của thấu kịnh
 
 class State(Enum):
-    RAW = auto()
-    CALIBRATING_INTRINSIC = auto()
-    CALIBRATED_INTRINSIC = auto()
-    CALIBRATING_EXTRINSIC = auto()
-    CALIBRATED = auto()
+    RAW = auto() # trạng thái chỉ hiển thị hình ảnh camera thô
+    CALIBRATING_INTRINSIC = auto() # đang lấy mẫu hiệu chuẩn nội tham
+    CALIBRATED_INTRINSIC = auto() # đã có thông số nội tham
+    CALIBRATING_EXTRINSIC = auto() # đang dò tim mặt bàn - Hiệu ngoại tham
+    CALIBRATED = auto() # sẵn sàng hoạt động - Tracking
 
 
 class Calibration:
@@ -152,6 +152,7 @@ class Calibration:
         # điều khiển vòng lặp của thuật toán tìm kiếm góc
         # vong lăp đủ 30 hoặc sai số nhỏ hơn 0.001
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        
         # Dựng lưới tọa độ 3D mẫu cho bàn cờ
         # giống như (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
         self.objp = np.zeros((10 * 7, 3), np.float32)

@@ -27,11 +27,11 @@ class Transform:
 
         return self
 
-    # Phép biến đổi ngược, chưa hiểu công thức
+    # với điều kiện matrix self là kết hợp chỉ tịnh tiến và quay
     def inverse(self):
         ret = Transform()
-        ret.matrix[0:3, 0:3] = self.matrix[0:3, 0:3].transpose() # chuyển vị (đối xứng)
-        ret.matrix[0:3, 3] = -ret.matrix[0:3, 0:3].dot(self.matrix[0:3, 3]) # ngược tịnh tiến
+        ret.matrix[0:3, 0:3] = self.matrix[0:3, 0:3].transpose() # R new
+        ret.matrix[0:3, 3] = -ret.matrix[0:3, 0:3] @ self.matrix[0:3, 3] # t new 
 
         return ret
 
@@ -39,7 +39,6 @@ class Transform:
     def dot(self, points):
         shape = points.shape
         if shape[1] == 3:
-            # chuyển sang tọa độ đồng nhất
             ones = np.ones((shape[0], 1))
             homogeneous = np.hstack((points, ones)).T
         elif shape[1] == 4:
@@ -47,18 +46,17 @@ class Transform:
         else:
             raise ValueError(
                 "input array has to be of size 3 or in homogeneous coordinate, current size = " + str(shape))
-        return self.matrix.dot(homogeneous).T[:, 0:3]
+        return (self.matrix @ homogeneous).T[:, 0:3]
 
     # Nhân 2 ma trận với nhau (Phép biến đổi tổng hợp)
     def combine(self, transform, copy=False):
-        ret_transform = self
-        if not copy:
-            self.matrix = self.matrix.dot(transform.matrix)
-        else:
-            new_matrix = self.matrix.dot(transform.matrix)
-            ret_transform = Transform.from_matrix(new_matrix)
+        if copy:
+            new_matrix = self.matrix @ transform.matrix
+            return Transform.from_matrix(new_matrix)
 
-        return ret_transform
+        self.matrix = self.matrix @ transform.matrix
+        return self
+
 
     # lấy thông tin của ma trận (tọa độ + góc quay)
     def to_parameters(self, isDegree=False):
@@ -113,64 +111,91 @@ class Transform:
 
     # Tạo ma trận xoay 3x3 từ góc quay Euler, chưa hiểu
     def rodrigues(self, x, y, z):
-        matrix = np.eye(3)
-        omega_skew = np.zeros((3, 3))
-        omega_skew[0, 1] = -z
-        omega_skew[1, 0] = z
-        omega_skew[0, 2] = y
-        omega_skew[2, 0] = -y
-        omega_skew[1, 2] = -x
-        omega_skew[2, 1] = x
-
-        omega_skew_sqr = np.matmul(omega_skew, omega_skew)
-        theta_sqr = x ** 2 + y ** 2 + z ** 2
+        # 1. Tính bình phương góc quay và góc quay theta
+        theta_sqr = x**2 + y**2 + z**2
         theta = math.sqrt(theta_sqr)
+
+        # 2. Kiểm tra trường hợp đặc biệt: Nếu góc quay gần bằng 0, trả về ma trận đơn vị
+        if theta < 1e-12:
+            return np.eye(3, dtype=np.float32)
+
+        # 3. Tạo ma trận phản đối xứng (Skew-symmetric matrix)
+        # Thay vì tạo từng dòng, ta khởi tạo trực tiếp từ x, y, z
+        omega_skew = np.array([
+            [ 0, -z,  y],
+            [ z,  0, -x],
+            [-y,  x,  0]
+        ])
+
+        # 4. Tính toán các hệ số chuẩn hóa
+        # Công thức: R = I + (sin(theta)/theta) * K + ((1 - cos(theta))/theta^2) * K^2
         sin_theta = math.sin(theta)
-
-        if theta == 0:
-            return np.eye(3)
-
         one_minus_cos_theta = 1 - math.cos(theta)
-        one_minus_cos_div_theta_sqr = one_minus_cos_theta / theta_sqr
+        
+        # Hệ số cho omega_skew và omega_skew_sqr
+        a = sin_theta / theta
+        b = one_minus_cos_theta / theta_sqr
 
-        sin_theta_div_theta_tensor = np.ones((3, 3))
-        one_minus_cos_div_theta_sqr_tensor = np.ones((3, 3))
+        # 5. Tính ma trận quay cuối cùng
+        # omega_skew @ omega_skew là phép nhân ma trận (omega_skew bình phương)
+        res = np.eye(3) + a * omega_skew + b * (omega_skew @ omega_skew)
 
-        if theta_sqr > 1e-12 and theta != 0:
-            sin_theta_div_theta = sin_theta / theta
-            sin_theta_div_theta_tensor.fill(sin_theta_div_theta)
-            one_minus_cos_div_theta_sqr_tensor.fill(one_minus_cos_div_theta_sqr)
-        else:
-            sin_theta_div_theta_tensor.fill(1)
-            one_minus_cos_div_theta_sqr_tensor.fill(0)
-        matrix = matrix + np.multiply(sin_theta_div_theta_tensor, omega_skew) + \
-                 np.multiply(one_minus_cos_div_theta_sqr_tensor, omega_skew_sqr)
+        return res
 
-        return matrix
-
-    # ngược lại với hàm trên, chưa hiểu
     def rodrigues_inverse(self, matrix):
-        x, y, z = 0, 0, 0
-        r = matrix - matrix.T
-        t = np.trace(matrix)
-        if t >= 3. - 1e-12:
-            w = (0.5 - ((t-3.)/12.)) * r
-            x, y, z = w[2, 1], w[0, 2], w[1, 0]
-        elif t > -1. + 1e-12:
-            theta = math.acos((t - 1.) / 2.)
-            w = (theta/(2.*math.sin(theta))) * r
-            x, y, z = w[2, 1], w[0, 2], w[1, 0]
-        else:
-            diag = np.diag(matrix)
-            a = np.argmax(diag)
-            b = (a + 1) % 3
-            c = (a + 2) % 3
-            s = np.sqrt(diag[a] - diag[b] - diag[c] + 1)
-            v = np.zeros(diag.shape)
-            # unit quaternion (w, v)
-            v[a] = s/2.
-            v[b] = (1./(2.*s)) * (matrix[b, a] + matrix[a, b])
-            v[c] = (1./(2.*s)) * (matrix[c, a] + matrix[a, c])
-            v = math.pi * (v/np.linalg.norm(v))
-            x, y, z = v[0], v[1], v[2]
-        return x, y, z
+        # trace(R) = R11 + R22 + R33
+        trace_R = np.trace(matrix)
+
+        # Từ công thức:
+        # trace(R) = 1 + 2*cos(theta)
+        cos_theta = (trace_R - 1.0) / 2.0
+
+        # Tránh lỗi số học
+        cos_theta = np.clip(cos_theta, -1.0, 1.0)
+
+        # Góc quay
+        theta = math.acos(cos_theta)
+
+        # ==========================
+        # Trường hợp theta ≈ 0
+        # ==========================
+        if theta < 1e-8:
+            return 0.0, 0.0, 0.0
+
+        # ==========================
+        # Trường hợp thông thường
+        # 0 < theta < pi
+        # ==========================
+        if abs(theta - math.pi) > 1e-6:
+            # R−RT = 2sin(θ)K
+            ux = (matrix[2, 1] - matrix[1, 2]) / (2.0 * math.sin(theta))
+            uy = (matrix[0, 2] - matrix[2, 0]) / (2.0 * math.sin(theta))
+            uz = (matrix[1, 0] - matrix[0, 1]) / (2.0 * math.sin(theta))
+
+            x = theta * ux
+            y = theta * uy
+            z = theta * uz
+
+            return x, y, z
+
+        # chưa hiểu
+        # ==========================
+        # Trường hợp theta ≈ pi
+        # R=I+2K^2 => R=2uuT−I
+        # ==========================
+        # Lấy trục quay từ đường chéo chính
+
+        ux = math.sqrt(max(0.0, (matrix[0, 0] + 1.0) / 2.0))
+        uy = math.sqrt(max(0.0, (matrix[1, 1] + 1.0) / 2.0))
+        uz = math.sqrt(max(0.0, (matrix[2, 2] + 1.0) / 2.0))
+
+        axis = np.array([ux, uy, uz])
+
+        norm = np.linalg.norm(axis)
+
+        if norm > 1e-8:
+            axis /= norm
+
+        rotation_vector = math.pi * axis
+
+        return tuple(rotation_vector)

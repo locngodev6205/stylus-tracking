@@ -10,21 +10,24 @@ from stylus_tracking.ui.graph import Graph
 
 
 class App:
-    DELAY = 1
+    DELAY = 1 # 1ms
     RESIZE_FACTOR = 1
     COLOR = "#e6e6e6"
 
     def __init__(self, window: tk.Tk, window_title: str, controller: Controller, logger):
+        # window co giản tùy element trên nó
         self.window = window
-
+        
+        # cấu hình window
         self.window.title(window_title)
-
         self.window.bind('<Escape>', lambda e: window.quit())
         self.window.config(background=self.COLOR)
 
         self.controller = controller
 
-        self.current_graph = Graph(self.window, 10, 8)
+        self.current_graph = Graph(self.window, 10, 8) # không dùng đến
+
+        # dùng để vẽ lên
         self.canvas_drawing = tk.Canvas(self.window,
                                          width=self.controller.model.drawing.shape[1],
                                          height=self.controller.model.drawing.shape[0],
@@ -36,6 +39,7 @@ class App:
         self.camera_frame = None
         self.camera_canvas = None
 
+        # vẽ button
         self.reset_graph = tk.Button(self.window,
                                      text="Reset graph",
                                      command=self.__reset_graph)
@@ -65,11 +69,15 @@ class App:
 
         self.__update()
 
+        # duy trì cửa sổ
         self.window.mainloop()
 
+
+    # hàm lặp chính
     def __update(self):
         refresh = self.controller.next_frame()
         if self.camera_frame is not None:
+            # đưa hình ảnh lên window thứ 2
             resized_image = cv2.resize(self.controller.model.current_frame, None,
                                        fx=self.RESIZE_FACTOR, fy=self.RESIZE_FACTOR, interpolation=cv2.INTER_LINEAR)
             self.current_image = ImageTk.PhotoImage(image=Image.fromarray(resized_image))
@@ -99,6 +107,7 @@ class App:
             self.coord_z.config(text="Z: --- mm", fg="#777777")
 
         # self.__update_graphic()
+        # delay 1ms rồi mới gọi update
         self.window.after(self.DELAY, self.__update)
 
     def __update_graphic(self):
@@ -111,6 +120,7 @@ class App:
         self.controller.model.reset_graph()
 
     def __calibration_child(self):
+        # tạo một window mới 
         self.camera_frame = tk.Toplevel(self.window)
         self.camera_frame.bind('<Escape>', self.__close_camera_frame)
         self.camera_frame.protocol('WM_DELETE_WINDOW', self.__close_camera_frame)

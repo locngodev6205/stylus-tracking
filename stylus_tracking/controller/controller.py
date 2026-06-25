@@ -24,7 +24,7 @@ class Controller:
     FLIP_HORIZONTAL = False
 
     # ĐỔI IP THÀNH IP ĐIỆN THOẠI CỦA BẠN (xem trong app DroidCam)
-    DROIDCAM_URL = "http://172.16.1.249:4747/video"
+    DROIDCAM_URL = "http://10.10.49.228:4747/video"
 
     def __init__(self, logger: Logger, video_source=None):
         self.logger = logger
@@ -35,6 +35,7 @@ class Controller:
                 video_source = 0  # 0 là camera mặc định của máy tính
         self.video_capture = VideoCapture(video_source, flip_horizontal=self.FLIP_HORIZONTAL)
         self.calibration = calibration.Calibration(self.logger.getChild("Calibration"))
+        
         self.state = State.RAW
         self.detection = None
 
@@ -47,7 +48,6 @@ class Controller:
         elif self.FILTER_TYPE == "none":
             self.filter = FilterNone()
 
-    # GIAI ĐOẠN 4: NHẬN DẠNG VÀ BẮT TỌA ĐỘ BÚT REAL-TIME
     def next_frame(self):
         ret, frame = self.video_capture.get_next_frame()
         self.model.current_frame = frame
