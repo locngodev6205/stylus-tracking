@@ -25,8 +25,8 @@ def get_grid_cells_btw(p1, p2):
     if x1 == x2 and y2 == y1:
         return []
     if dx == 0:  # will divide by dx later, this will cause err. Catch this case up here
-        step = np.sign(dy)
-        ys = np.arange(0, dy + step, step)
+        step = np.sign(dy) # xét dấu 1, -1, 0
+        ys = np.arange(y1, y2 + step, step)
         xs = np.repeat(x1, ys.shape[0])
     else:
         m = dy / (dx + 0.0)
@@ -39,9 +39,6 @@ def get_grid_cells_btw(p1, p2):
     xs = np.rint(xs)
     ys = np.rint(ys)
     pts = np.column_stack((xs, ys))
-
-    if x1 == x2:
-        pts[:,1] += y1
 
     return pts.astype(int)
 
@@ -56,6 +53,7 @@ class AppModel:
         # lưu hình ảnh hiện tại từ camera đẻ GUI hiển thị lên màn hình
         self.current_frame = None
         self.graph = None
+        
         self.new_x = None
         self.new_y = None
         self.new_z = None
@@ -96,7 +94,7 @@ class AppModel:
         # đậm/nhạt phụ thuộc vào độ cao/thấp của đầu bút
         iz = min(255, max(0, 256 - abs(int(z*Z_GRAY_FACTOR))))
 
-        # bàn vẽ ảo
+        # bàn vẽ ảo, màu xám
         self.drawing[ix, iy, :] = iz, iz, iz
         # tỏa ra 4 phía cho nét hơn
         self.drawing[ix, iy + 1, :] = iz, iz, iz
@@ -105,7 +103,7 @@ class AppModel:
         self.drawing[ix - 1, iy, :] = iz, iz, iz
 
         if self.last_x:
-            # nội suy ra các điểm nằm trên đường thẳng nối 2 điểm gần nhất
+            # nội suy tuyến tính ra các điểm nằm trên đường thẳng nối 2 điểm gần nhất
             for i in get_grid_cells_btw((self.last_x, self.last_y), (ix, iy)):
                 x = i[0]
                 y = i[1]

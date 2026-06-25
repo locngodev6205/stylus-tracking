@@ -1,4 +1,5 @@
 import cv2
+from typing import Tuple, Any
 
 
 class VideoCapture:
@@ -26,7 +27,7 @@ class VideoCapture:
         if self.video_capture.isOpened():
             self.video_capture.release()
 
-    def get_next_frame(self) -> (bool, any):
+    def get_next_frame(self) -> Tuple[bool, Any]:
         if self.video_capture.isOpened():
             ret, image = self.video_capture.read()
             if ret:

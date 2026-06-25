@@ -63,7 +63,6 @@ class Calibration:
         self.logger.info(f" -> distCoef: {self.intrinsic_parameters['distCoef'].flatten()}")
         return True
 
-    # 
     def calculate_extrinsic(self, frame) -> bool:
         self.logger.info("Starting EXTRINSIC calibration.")
         # quét tìm 4 marker ở bàn
@@ -81,12 +80,13 @@ class Calibration:
 
         # trích xuất tọa độ 2D của 4 marker
         if np.any(ids) and np.all(np.isin(self.CORNERS_IDS, ids)):
+            # chứa tọa độ của 4 góc ngoài cùng của marker
             image_points = np.zeros((4, 2))
             for id, corner in zip(ids, corners):
                 index = self.CORNERS_IDS.index(id)
                 image_points[index] = corner[0, index, :]
 
-            # Giải bài toán hình học không gian 3D
+            # Giải bài toán hình học không gian 3D PnP
             _, rvec, tvec = cv2.solvePnP(self.OBJECT_POINTS, image_points,
                                                      self.intrinsic_parameters['cameraMatrix'],
                                                      self.intrinsic_parameters['distCoef'])

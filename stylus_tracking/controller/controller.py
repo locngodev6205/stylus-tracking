@@ -24,7 +24,7 @@ class Controller:
     FLIP_HORIZONTAL = False
 
     # ĐỔI IP THÀNH IP ĐIỆN THOẠI CỦA BẠN (xem trong app DroidCam)
-    DROIDCAM_URL = "http://10.10.49.228:4747/video"
+    DROIDCAM_URL = "http://172.16.0.220:4747/video"
 
     def __init__(self, logger: Logger, video_source=None):
         self.logger = logger
@@ -53,10 +53,10 @@ class Controller:
         self.model.current_frame = frame
         refresh = False
         if ret:
-            self.model.current_frame = frame
             if self.state is State.CALIBRATING_INTRINSIC:
                 if self.calibration.calculate_intrinsic(frame):
                     self.state = State.CALIBRATED_INTRINSIC
+            # như trạng thái nút, phải nhấn lại thì mới vào lại trạng thái CALIBRATING_EXTRINSIC
             if self.state is State.CALIBRATING_EXTRINSIC:
                 if self.calibration.calculate_extrinsic(self.model.current_frame):
                     self.state = State.CALIBRATED

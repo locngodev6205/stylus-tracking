@@ -84,9 +84,9 @@ class Detection:
             rvec = rotation.copy()
             tvec = translation_.copy()
 
-            # Vẽ hệ trục tọa độ, 3 trục 3 màu (X: đỏ, Y: lục, Z: lam)
-            img = cv2.drawFrameAxes(img, self.cam_param.intrinsic_parameters['cameraMatrix'],
-                                   self.cam_param.intrinsic_parameters['distCoef'], rvec, tvec, length=100)
+            # # Vẽ hệ trục tọa độ, 3 trục 3 màu (X: đỏ, Y: lục, Z: lam)
+            # img = cv2.drawFrameAxes(img, self.cam_param.intrinsic_parameters['cameraMatrix'],
+            #                        self.cam_param.intrinsic_parameters['distCoef'], rvec, tvec, length=100)
 
             # Tạo đối trượng Transform chứa tất cả thông tin biến đổi (Stylus-to-Camera)
             stylus_to_camera = transform.Transform.from_parameters(tvec[0].item(), tvec[1].item(),
@@ -105,67 +105,67 @@ class Detection:
             position_y = tip_info[1]
             position_z = tip_info[2]
 
-            # === VẼ TỌA ĐỘ VÀ CHẤM ĐỎ NGAY TẠI ĐẦU BÚT TRÊN ẢNH CAMERA ===
-            tip_3d_cam = tip_to_camera.matrix[0:3, 3] # vị trí 3D của đầu bút so với camera
-            img_pts, _ = cv2.projectPoints(
-                np.array([tip_3d_cam], dtype=np.float64),
-                np.zeros((3, 1), dtype=np.float64),
-                np.zeros((3, 1), dtype=np.float64),
-                self.cam_param.intrinsic_parameters['cameraMatrix'],
-                self.cam_param.intrinsic_parameters['distCoef']
-            )
-            pixel_x = int(img_pts[0][0][0])
-            pixel_y = int(img_pts[0][0][1])
+            # # === VẼ TỌA ĐỘ VÀ CHẤM ĐỎ NGAY TẠI ĐẦU BÚT TRÊN ẢNH CAMERA ===
+            # tip_3d_cam = tip_to_camera.matrix[0:3, 3] # vị trí 3D của đầu bút so với camera
+            # img_pts, _ = cv2.projectPoints(
+            #     np.array([tip_3d_cam], dtype=np.float64),
+            #     np.zeros((3, 1), dtype=np.float64),
+            #     np.zeros((3, 1), dtype=np.float64),
+            #     self.cam_param.intrinsic_parameters['cameraMatrix'],
+            #     self.cam_param.intrinsic_parameters['distCoef']
+            # )
+            # pixel_x = int(img_pts[0][0][0])
+            # pixel_y = int(img_pts[0][0][1])
 
-            # Vẽ chấm đỏ và vòng tròn trắng bao quanh tại vị trí đầu bút trên camera
-            cv2.circle(img, (pixel_x, pixel_y), 6, (0, 0, 255), -1)
-            cv2.circle(img, (pixel_x, pixel_y), 10, (255, 255, 255), 2)
-            # Viết tọa độ ngay cạnh đầu bút trên màn hình camera
-            cv2.putText(img, f"Tip: ({position_x:.1f}, {position_y:.1f}, {position_z:.1f})", 
-                        (pixel_x + 15, pixel_y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            # # Vẽ chấm đỏ và vòng tròn trắng bao quanh tại vị trí đầu bút trên camera
+            # cv2.circle(img, (pixel_x, pixel_y), 6, (0, 0, 255), -1)
+            # cv2.circle(img, (pixel_x, pixel_y), 10, (255, 255, 255), 2)
+            # # Viết tọa độ ngay cạnh đầu bút trên màn hình camera
+            # cv2.putText(img, f"Tip: ({position_x:.1f}, {position_y:.1f}, {position_z:.1f})", 
+            #             (pixel_x + 15, pixel_y - 10),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
-            # === VẼ THÔNG TIN LÊN MÀN HÌNH (OVERLAY) ===
-            h, w = img.shape[:2]
-            # Nền bán trong suốt cho phần text
-            overlay = img.copy()
-            cv2.rectangle(overlay, (10, 10), (420, 130), (0, 0, 0), -1)
-            cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
+            # # === VẼ THÔNG TIN LÊN MÀN HÌNH (OVERLAY) ===
+            # h, w = img.shape[:2]
+            # # Nền bán trong suốt cho phần text
+            # overlay = img.copy()
+            # cv2.rectangle(overlay, (10, 10), (420, 130), (0, 0, 0), -1)
+            # cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
 
-            # Trạng thái nhận diện
-            cv2.putText(img, f"Markers: {num_detected} detected", (20, 35),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            # Tọa độ đầu bút
-            cv2.putText(img, f"X: {position_x:7.1f} mm", (20, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-            cv2.putText(img, f"Y: {position_y:7.1f} mm", (20, 85),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            # Màu cho Z: xanh lá nếu gần bàn (|z| < 20), vàng nếu hơi cao, đỏ nếu quá cao
-            if abs(position_z) < 20:
-                z_color = (0, 255, 0)   # Xanh lá - gần mặt bàn
-            elif abs(position_z) < 80:
-                z_color = (0, 255, 255) # Vàng - hơi cao
-            else:
-                z_color = (0, 0, 255)   # Đỏ - quá cao / nhảy bất thường
-            cv2.putText(img, f"Z: {position_z:7.1f} mm", (20, 110),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, z_color, 2)
+            # # Trạng thái nhận diện
+            # cv2.putText(img, f"Markers: {num_detected} detected", (20, 35),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            # # Tọa độ đầu bút
+            # cv2.putText(img, f"X: {position_x:7.1f} mm", (20, 60),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            # cv2.putText(img, f"Y: {position_y:7.1f} mm", (20, 85),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            # # Màu cho Z: xanh lá nếu gần bàn (|z| < 20), vàng nếu hơi cao, đỏ nếu quá cao
+            # if abs(position_z) < 20:
+            #     z_color = (0, 255, 0)   # Xanh lá - gần mặt bàn
+            # elif abs(position_z) < 80:
+            #     z_color = (0, 255, 255) # Vàng - hơi cao
+            # else:
+            #     z_color = (0, 0, 255)   # Đỏ - quá cao / nhảy bất thường
+            # cv2.putText(img, f"Z: {position_z:7.1f} mm", (20, 110),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, z_color, 2)
 
-            # In ra terminal (giữ nguyên)
-            print(f"\r Tip position: x={position_x:7.1f}  y={position_y:7.1f}  z={position_z:7.1f} mm", end="")
+            # # In ra terminal (giữ nguyên)
+            # print(f"\r Tip position: x={position_x:7.1f}  y={position_y:7.1f}  z={position_z:7.1f} mm", end="")
 
             return img, (position_x, position_y, position_z, 1)
         else:
-            # === KHI KHÔNG NHẬN DIỆN ĐƯỢC TƯ THẾ ===
-            overlay = img.copy()
-            cv2.rectangle(overlay, (10, 10), (420, 60), (0, 0, 0), -1)
-            cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
+            # # === KHI KHÔNG NHẬN DIỆN ĐƯỢC TƯ THẾ ===
+            # overlay = img.copy()
+            # cv2.rectangle(overlay, (10, 10), (420, 60), (0, 0, 0), -1)
+            # cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
 
-            if num_detected > 0:
-                cv2.putText(img, f"Markers: {num_detected} (pose failed)", (20, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
-            else:
-                cv2.putText(img, "No markers detected", (20, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            # if num_detected > 0:
+            #     cv2.putText(img, f"Markers: {num_detected} (pose failed)", (20, 40),
+            #                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
+            # else:
+            #     cv2.putText(img, "No markers detected", (20, 40),
+            #                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
             return img, None
 
