@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "codegraph": {
+      "type": "stdio",
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp",
+        "--path",
+        "/mnt/windows/Users/62205/Documents/locngo/self-study/IOT/Stylus Tracking/stylus-tracking"
+      ]
+    }
+  }
+}

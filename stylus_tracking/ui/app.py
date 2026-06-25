@@ -25,6 +25,7 @@ class App:
 
         self.controller = controller
 
+        # vẽ 3D
         self.current_graph = Graph(self.window, 10, 8) # không dùng đến
 
         # khung draw ở win1
@@ -52,21 +53,6 @@ class App:
                                              command=self.__calibration_child)
         self.calibration_button.grid(row=3, column=1, pady=5)
 
-        # # Khung hiển thị tọa độ đầu bút
-        # self.coord_frame = tk.LabelFrame(self.window, text="",
-        #                                  font=("Helvetica", 11, "bold"), fg="#333333",
-        #                                  background=self.COLOR, bd=2, relief="groove")
-        # self.coord_frame.grid(row=4, column=1, pady=10, padx=10, sticky="ew")
-
-        # self.coord_x = tk.Label(self.coord_frame, text="X: --- mm", font=("Consolas", 12, "bold"), fg="#777777", background=self.COLOR)
-        # self.coord_x.grid(row=1, column=1, padx=15, pady=5)
-        # 
-        # self.coord_y = tk.Label(self.coord_frame, text="Y: --- mm", font=("Consolas", 12, "bold"), fg="#777777", background=self.COLOR)
-        # self.coord_y.grid(row=1, column=2, padx=15, pady=5)
-        # 
-        # self.coord_z = tk.Label(self.coord_frame, text="Z: --- mm", font=("Consolas", 12, "bold"), fg="#777777", background=self.COLOR)
-        # self.coord_z.grid(row=1, column=3, padx=15, pady=5)
-
         self.current_image = None
 
         self.__update()
@@ -85,6 +71,23 @@ class App:
             # thi phóng hình ảnh để lên window thứ 2
             resized_image = cv2.resize(self.controller.model.current_frame, None,
                                        fx=self.RESIZE_FACTOR, fy=self.RESIZE_FACTOR, interpolation=cv2.INTER_LINEAR)
+            
+            # # --- VẼ TỌA ĐỘ TRỰC TIẾP LÊN HÌNH ẢNH CAMERA ---
+            # new_x = self.controller.model.new_x
+            # new_y = self.controller.model.new_y
+            # new_z = self.controller.model.new_z
+            
+            # if new_x is not None and new_y is not None and new_z is not None:
+            #     text = f"X: {new_x:5.1f}  Y: {new_y:5.1f}  Z: {new_z:5.1f} (mm)"
+            #     # Tạo viền đen cho chữ dễ đọc trên nền sáng
+            #     cv2.putText(resized_image, text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 4, cv2.LINE_AA)
+            #     # Chữ chính màu xanh lá
+            #     cv2.putText(resized_image, text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
+            # else:
+            #     text = "Tracking Lost / No Stylus Detected"
+            #     cv2.putText(resized_image, text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 4, cv2.LINE_AA)
+            #     cv2.putText(resized_image, text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
+
             # chuyển về đúng định dạng mà lib Tkinter dùng
             # hình ảnh của camera (win2)
             self.current_image = ImageTk.PhotoImage(image=Image.fromarray(resized_image))
@@ -94,26 +97,7 @@ class App:
         self.current_drawing = ImageTk.PhotoImage(image=Image.fromarray(self.controller.model.drawing))
         self.canvas_drawing.create_image(0, 0, image=self.current_drawing, anchor=tk.NW)
 
-        # new_x = self.controller.model.new_x
-        # new_y = self.controller.model.new_y
-        # new_z = self.controller.model.new_z
-        # if new_x is not None and new_y is not None and new_z is not None:
-        #     self.coord_x.config(text=f"X: {new_x:7.1f} mm", fg="#d32f2f")
-        #     self.coord_y.config(text=f"Y: {new_y:7.1f} mm", fg="#388e3c")
-        #     # Màu cho Z: xanh lá nếu sát mặt bàn (|z| < 20), vàng nếu hơi cao, đỏ nếu quá cao
-        #     if abs(new_z) < 20:
-        #         z_color = "#388e3c" # xanh lá
-        #     elif abs(new_z) < 80:
-        #         z_color = "#f57c00" # vàng/cam
-        #     else:
-        #         z_color = "#d32f2f" # đỏ
-        #     self.coord_z.config(text=f"Z: {new_z:7.1f} mm", fg=z_color)
-        # else:
-        #     self.coord_x.config(text="X: --- mm", fg="#777777")
-        #     self.coord_y.config(text="Y: --- mm", fg="#777777")
-        #     self.coord_z.config(text="Z: --- mm", fg="#777777")
-
-        # self.__update_graphic()
+        self.__update_graphic()
         # delay 1ms rồi mới gọi update
         self.window.after(self.DELAY, self.__update)
 
@@ -137,7 +121,7 @@ class App:
                                        width=VideoCapture.WIDTH * self.RESIZE_FACTOR,
                                        height=VideoCapture.HEIGHT * self.RESIZE_FACTOR,
                                        background=self.COLOR)
-        self.camera_canvas.grid(row=2, column=1)
+        self.camera_canvas.grid(row=1, column=1)
 
 
         # button

@@ -14,8 +14,8 @@ from stylus_tracking.filter.filter import FilterNone, FilterMedian, FilterKalman
 class Controller:
 
     BUFFER_SIZE = 9
-    FILTER_TYPE = "median"
-    # FILTER_TYPE = "kalman"
+    # FILTER_TYPE = "median"
+    FILTER_TYPE = "kalman"
 
     # CHỌN CAMERA: "phone" (dùng DroidCam) hoặc "pc" (dùng Webcam máy tính)
     CAMERA_MODE = "phone" 

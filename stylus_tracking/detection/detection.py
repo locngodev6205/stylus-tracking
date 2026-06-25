@@ -105,25 +105,25 @@ class Detection:
             position_y = tip_info[1]
             position_z = tip_info[2]
 
-            # # === VẼ TỌA ĐỘ VÀ CHẤM ĐỎ NGAY TẠI ĐẦU BÚT TRÊN ẢNH CAMERA ===
-            # tip_3d_cam = tip_to_camera.matrix[0:3, 3] # vị trí 3D của đầu bút so với camera
-            # img_pts, _ = cv2.projectPoints(
-            #     np.array([tip_3d_cam], dtype=np.float64),
-            #     np.zeros((3, 1), dtype=np.float64),
-            #     np.zeros((3, 1), dtype=np.float64),
-            #     self.cam_param.intrinsic_parameters['cameraMatrix'],
-            #     self.cam_param.intrinsic_parameters['distCoef']
-            # )
-            # pixel_x = int(img_pts[0][0][0])
-            # pixel_y = int(img_pts[0][0][1])
+            # === VẼ TỌA ĐỘ VÀ CHẤM ĐỎ NGAY TẠI ĐẦU BÚT TRÊN ẢNH CAMERA ===
+            tip_3d_cam = tip_to_camera.matrix[0:3, 3] # vị trí 3D của đầu bút so với camera
+            img_pts, _ = cv2.projectPoints(
+                np.array([tip_3d_cam], dtype=np.float64),
+                np.zeros((3, 1), dtype=np.float64),
+                np.zeros((3, 1), dtype=np.float64),
+                self.cam_param.intrinsic_parameters['cameraMatrix'],
+                self.cam_param.intrinsic_parameters['distCoef']
+            )
+            pixel_x = int(img_pts[0][0][0])
+            pixel_y = int(img_pts[0][0][1])
 
-            # # Vẽ chấm đỏ và vòng tròn trắng bao quanh tại vị trí đầu bút trên camera
-            # cv2.circle(img, (pixel_x, pixel_y), 6, (0, 0, 255), -1)
-            # cv2.circle(img, (pixel_x, pixel_y), 10, (255, 255, 255), 2)
-            # # Viết tọa độ ngay cạnh đầu bút trên màn hình camera
-            # cv2.putText(img, f"Tip: ({position_x:.1f}, {position_y:.1f}, {position_z:.1f})", 
-            #             (pixel_x + 15, pixel_y - 10),
-            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            # Vẽ chấm đỏ và vòng tròn trắng bao quanh tại vị trí đầu bút trên camera
+            cv2.circle(img, (pixel_x, pixel_y), 6, (0, 0, 255), -1)
+            cv2.circle(img, (pixel_x, pixel_y), 10, (255, 255, 255), 2)
+            # Viết tọa độ ngay cạnh đầu bút trên màn hình camera
+            cv2.putText(img, f"Tip: ({position_x:.1f}, {position_y:.1f}, {position_z:.1f})", 
+                        (pixel_x + 15, pixel_y - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
             # # === VẼ THÔNG TIN LÊN MÀN HÌNH (OVERLAY) ===
             # h, w = img.shape[:2]
