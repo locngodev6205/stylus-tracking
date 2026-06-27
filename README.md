@@ -2,7 +2,7 @@
 
 Pen position detection using aruco markers.
 
-![cat drawing](res/cat_kalman.jpg)
+![cat drawing](res/demo.jpeg)
 
 ### Reference aruco positions and labels:
 

@@ -24,7 +24,7 @@ class Controller:
     FLIP_HORIZONTAL = False
 
     # ĐỔI IP THÀNH IP ĐIỆN THOẠI CỦA BẠN (xem trong app DroidCam)
-    DROIDCAM_URL = "http://172.16.0.220:4747/video"
+    DROIDCAM_URL = "http://192.168.1.5:4747/video"
 
     def __init__(self, logger: Logger, video_source=None):
         self.logger = logger
